@@ -1,61 +1,71 @@
-# Agent guide
+# Working with this repository
 
-Runnable PowerShell examples for the Payam Resan SMS web service. One file per
-API method, and every file has to work on its own.
+You are looking at runnable PowerShell scripts for the **Payam Resan** SMS web
+service (`api.sms-webservice.com`, API V3), an Iranian SMS provider. The reader
+these are written for is a Windows server administrator, which in practice means
+**Windows PowerShell 5.1** — monitoring alerts, scheduled reminders, a line in a
+maintenance script.
 
-## Rule one: no dependencies
+Nothing to install: `Invoke-RestMethod` ships with the shell.
 
-An example runs with a stock PowerShell and nothing else. `Invoke-RestMethod`
-ships with the shell, so there is no module from the gallery, no `Install-Module`
-and no helper from this repository. A reader copies the file into their script
-and it works.
+## Start here
 
-## Rule two: write for 5.1, not just for 7
+```powershell
+$env:PAYAM_RESAN_API_KEY = '123456-XXXXXXXXXXXXXXX'
+.\examples\v3\account-info.ps1
+```
 
-The reader is a Windows server administrator, which in practice means Windows
-PowerShell 5.1. Three things in every example exist only for that, and each one
-still works on 7 if removed, which is what makes them easy to lose:
+`account-info.ps1` sends nothing, spends no credit, and answering proves the key
+and the connection.
 
-- **A UTF-8 BOM at the start of the file.** Without it 5.1 reads the file with
-  the system ANSI codepage and the Persian text is destroyed. `./check-encoding.sh`
-  is the guard; git cannot enforce this, since a BOM is ordinary content to it.
-- **The body sent as bytes:** `[System.Text.Encoding]::UTF8.GetBytes($payload)`.
-  Hand 5.1 a string and it encodes with the default codepage, so a Persian
-  message arrives as question marks.
-- **`-Depth` on `ConvertTo-Json`.** The default on 5.1 is 2, and `Recipients`
-  then serialises as the literal string `System.Collections.Hashtable`.
+## Rule 1: three things exist only for PowerShell 5.1
 
-The `Tls12` line belongs to the same family: older Windows builds still default
-to TLS 1.0 and the service refuses them.
+Each of them still *works* on PowerShell 7 when removed, which is exactly what
+makes them easy to lose. If the user is on Windows Server, they are on 5.1.
 
-## Rule three: ordered hashtables
+**A UTF-8 BOM at the start of the file.** Without it, 5.1 reads the file with the
+system ANSI codepage and the Persian text inside is destroyed — sometimes it
+will not even parse. Git treats a BOM as ordinary content, so nothing in
+`.gitattributes` can enforce it; `check-encoding.sh` is the guard. If you create
+a new script for the user, write it with a BOM.
 
-Payloads use `[ordered]@{ … }`, not `@{ … }`. A plain hashtable has no order, so
-the generated JSON comes out shuffled and no longer lines up with the field
-order in the reference page. `[ordered]` costs nothing and keeps the two
-readable side by side.
+**The body sent as bytes**, not as a string:
 
-## Rule four: the examples are the documentation
+```powershell
+$body = [System.Text.Encoding]::UTF8.GetBytes($payload)
+```
 
-Each file carries `# docs:start` and `# docs:end`. The region between them is
-lifted verbatim into the method's page on docs.payam-resan.com, so it is read by
-people who have never seen this repository.
+Hand 5.1 a string and it encodes with the default codepage, so a Persian message
+arrives as question marks. Always paired with
+`-ContentType 'application/json; charset=utf-8'`.
 
-Two consequences:
+**`-Depth` on `ConvertTo-Json`.** The default on 5.1 is `2`, and `Recipients`
+then serialises as the literal string `System.Collections.Hashtable` — the
+service answers with a confusing error rather than a helpful one. Every payload
+uses `| ConvertTo-Json -Depth 5`. `send-token-multi.ps1` is the worst case,
+because `Parameters` is an array inside an array.
 
-- **Full-line comments are stripped** when the region is lifted. Anything the
-  reader must see has to be code. The `Success` check is an `if`, not a note.
-- The file name matches the reference page slug exactly: `send-bulk.ps1`,
-  `status-by-user-trace-id.ps1`. A path with two variants gets two files, the
-  plain name for `POST` and a `-get` suffix for `GET`.
+## Rule 2: the TLS line
 
-The full contract lives in the `handbook` repository, section `docs-site`, file
-`code-samples.md`.
+The first line of every example is there for a reason:
 
-## Rule five: check Success, never the status code
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+```
 
-The service answers `200` to everything, including a wrong key and an empty
-account, so the absence of an exception proves nothing:
+Older Windows builds still default to TLS 1.0 and the service refuses them. The
+symptom is a connection error that looks like a firewall problem.
+
+## Rule 3: `[ordered]@{}`, not `@{}`
+
+A plain hashtable has no order, so the generated JSON comes out shuffled and no
+longer lines up with the field order in the reference page. It still works, but
+it makes every diff and every support conversation harder.
+
+## Rule 4: `Success`, never the HTTP status
+
+The service answers `200` to everything, including a wrong key, an empty account
+and a malformed body.
 
 ```powershell
 if (-not $response.Success) {
@@ -64,45 +74,110 @@ if (-not $response.Success) {
 }
 ```
 
-## Rule six: a version is a folder
+`ErrorCode` is only meaningful when `Success` is false. There is no `try`/`catch`
+in these scripts: `Invoke-RestMethod` throws on a transport failure, which for a
+scheduled task is the right shape. In a long-running script, catch it — and note
+that a thrown timeout means the outcome is **unknown**, see Rule 7.
 
-A new service version means a new `examples/v<n>/`. No file inside an existing
-version folder is moved or renamed; older versions still have users.
+## Rule 5: running from Task Scheduler
 
-## Secrets
+Two things matter there, and both are easy to get wrong.
 
-The key comes from `PAYAM_RESAN_API_KEY` in the environment. No key, no real
-phone number and no customer name goes into a file here, not even a dead one.
-Example numbers are `9121112222` upward and the example key is
-`123456-XXXXXXXXXXXXXXX`.
+Put the key in a **machine-level** environment variable, not in the task and not
+in the code:
 
-## Layout
-
-| Path | What it holds |
-|---|---|
-| `examples/v3/` | one self-contained file per service operation |
-| `check-encoding.sh` | checks that every example starts with a BOM |
-| `.env.example` | the environment variables the examples read |
-
-## Before every commit
-
-```bash
-./check-encoding.sh
-
-for f in examples/v3/*.ps1; do
-	errors=$(pwsh -NoLogo -NoProfile -Command "
-		\$e = \$null
-		[void][System.Management.Automation.Language.Parser]::ParseFile('$f', [ref]\$null, [ref]\$e)
-		\$e.Count
-	")
-	[ "$errors" = "0" ] || echo "FAILED $f ($errors parse errors)"
-done
+```powershell
+[Environment]::SetEnvironmentVariable('PAYAM_RESAN_API_KEY', '123456-XXX', 'Machine')
 ```
 
-Point them at `api/V3SandBox/` before running one for real, so no message goes
-out.
+And set the execution policy for that one call rather than permanently:
 
-## Git
+```
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\scripts\send-bulk.ps1
+```
 
-Semantic messages, `type(scope): subject`, with no explanatory body and no
-attribution trailer. Commits here are authored as Payam Resan.
+To reuse a script as a function, wrap its body in `function` and take the key as
+a parameter.
+
+## Rule 6: pick the right method
+
+| The user wants | Use | File |
+|---|---|---|
+| one text to many people | `SendBulk` | `send-bulk.ps1` |
+| a different text per person | `SendMultiple` | `send-multiple.ps1` |
+| a one-time password or code | `SendTokenSingle` | `send-token-single.ps1` |
+| a template to many people | `SendTokenMulti` | `send-token-multi.ps1` |
+| delivery status | `StatusByUserTraceId` | `status-by-user-trace-id.ps1` |
+| balance and sender lines | `AccountInfo` | `account-info.ps1` |
+
+**A one-time password goes through a template**, not free text — that is the
+usual route for OTP, and the template fixes the sender line, which is why
+`SendTokenSingle` takes no `Sender`. `token-list.ps1` lists the account's
+templates; `Status` `2` means approved and sendable, `1` awaiting review, `3`
+rejected.
+
+**Prefer `SendBulk` over `send.ps1`.** `Send` is a `GET`: the key ends up in the
+URL and the web server log. Same for `send-token-single-get.ps1`.
+
+## Rule 7: phone numbers, the 99 cap, and `UserTraceId`
+
+The service wants `9121112222` or `989121112222`. Users type `09121112222` or
+`+989121112222`. Normalise before sending, or you get error `13`. Ninety-nine
+recipients per request is the ceiling for `SendBulk`, `SendMultiple` and
+`SendTokenMulti`. Cast the sender: `[long]$env:PAYAM_RESAN_SENDER`.
+
+Always send a `UserTraceId`. After a timeout or error `100`, resending blind may
+send twice; `StatusByUserTraceId` is the only safe way to learn whether the
+message was registered. `StatusCode -eq 8` there means the id is not in the
+account, so it is safe to send again.
+
+`SendTokenSingle` is the exception: it has no such input, so its `UserTraceId`
+comes back null. If a trace id is needed for an OTP, use `SendTokenMulti` with a
+single recipient.
+
+`[uri]::EscapeDataString` encodes exactly once — encode beforehand as well and
+the message arrives full of `%D8`.
+
+## Rule 8: know which errors are worth retrying
+
+These never succeed on retry — fix the cause; retrying only burns the rate limit
+until the account hits error `20`:
+
+`1`, `2`, `3`, `6`, `8`, `9`, `10`, `11`, `12`, `13`, `14`, `19`
+
+`19` is an empty balance; `10` means the server's IP is not on the account's
+allowlist. Treat any unknown code the way you treat `100`: unclear outcome,
+check with `StatusByUserTraceId` before resending.
+
+## Rule 9: delivery status is a poll, not a callback
+
+Status codes `0`, `1`, `2`, `3` and `10` mean still in flight — query again
+later, and not more often than every few minutes or you will hit error `20`. A
+scheduled task every minute is the usual way people trip this. Everything else
+is final. Branch on `StatusCode`, never on the `Status` text, which is Persian
+prose meant for humans and can change.
+
+## Rule 10: `GetInbox` consumes what it returns
+
+The service hands over each incoming message **once**. A scheduled task that
+fetches the inbox and then fails before writing the result has destroyed those
+messages. Write them to a file or a database in the same run.
+
+The sender field is called `Form`, not `From`. That is the service's spelling.
+
+## Testing without spending credit
+
+Replace `V3` with `V3SandBox` in the URL. No message is sent and no credit is
+spent. `TokenList` is not implemented there.
+
+The sandbox is a simulator, not a mirror of the account: credit is always
+`1234567`, sender lines are invented, and **it accepts any key**. Success there
+proves nothing about the user's real key.
+
+## Where the authoritative answers are
+
+- Method reference and error tables: <https://docs.payam-resan.com>
+- Machine-readable OpenAPI: <https://github.com/Mojeshahr/sms-webservice-spec>
+
+If the spec and these scripts ever disagree, the spec wins — report it as a bug
+rather than guessing.
