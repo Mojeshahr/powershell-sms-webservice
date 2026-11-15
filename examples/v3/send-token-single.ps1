@@ -22,7 +22,7 @@ $payload = [ordered]@{
 
 $response = Invoke-RestMethod `
     -Method Post `
-    -Uri 'https://api.sms-webservice.com/api/V3/SendTokenSingle' `
+    -Uri 'https://www.payam-resan.com/api/V3/SendTokenSingle' `
     -ContentType 'application/json; charset=utf-8' `
     -Body ([System.Text.Encoding]::UTF8.GetBytes($payload)) `
     -TimeoutSec 30

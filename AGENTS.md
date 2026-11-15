@@ -1,7 +1,7 @@
 # Working with this repository
 
 You are looking at runnable PowerShell scripts for the **Payam Resan** SMS web
-service (`api.sms-webservice.com`, API V3), an Iranian SMS provider. The reader
+service (`www.payam-resan.com`, API V3), an Iranian SMS provider. The reader
 these are written for is a Windows server administrator, which in practice means
 **Windows PowerShell 5.1** — monitoring alerts, scheduled reminders, a line in a
 maintenance script.

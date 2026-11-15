@@ -17,7 +17,7 @@ $payload = [ordered]@{ ApiKey = $env:PAYAM_RESAN_API_KEY } | ConvertTo-Json -Dep
 
 $response = Invoke-RestMethod `
     -Method Post `
-    -Uri 'https://api.sms-webservice.com/api/V3/GetInbox' `
+    -Uri 'https://www.payam-resan.com/api/V3/GetInbox' `
     -ContentType 'application/json; charset=utf-8' `
     -Body ([System.Text.Encoding]::UTF8.GetBytes($payload)) `
     -TimeoutSec 30

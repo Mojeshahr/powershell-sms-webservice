@@ -84,6 +84,8 @@ exception is `TokenList`, which the sandbox does not implement.
 | [token-list.ps1](examples/v3/token-list.ps1) | `TokenList` | The account's templates |
 | [send-token-single.ps1](examples/v3/send-token-single.ps1) | `SendTokenSingle` | Send a template to one number |
 | [send-token-single-get.ps1](examples/v3/send-token-single-get.ps1) | `SendTokenSingle` | The same, over `GET` |
+| [send-token-single-concat-param.ps1](examples/v3/send-token-single-concat-param.ps1) | `SendTokenSingleConcatParam` | Template values in one semicolon-separated `p` string |
+| [send-token-single-concat-param-get.ps1](examples/v3/send-token-single-concat-param-get.ps1) | `SendTokenSingleConcatParam` | The same, over `GET` |
 | [send-token-multi.ps1](examples/v3/send-token-multi.ps1) | `SendTokenMulti` | One template, many recipients |
 | [status-by-id.ps1](examples/v3/status-by-id.ps1) | `StatusById` | Status by the service's id |
 | [status-by-user-trace-id.ps1](examples/v3/status-by-user-trace-id.ps1) | `StatusByUserTraceId` | Status by your own id |

@@ -86,6 +86,8 @@ $env:PAYAM_RESAN_SENDER  = '30004040'
 | [token-list.ps1](examples/v3/token-list.ps1) | `TokenList` | فهرست قالب‌ها |
 | [send-token-single.ps1](examples/v3/send-token-single.ps1) | `SendTokenSingle` | ارسال قالب به یک شماره |
 | [send-token-single-get.ps1](examples/v3/send-token-single-get.ps1) | `SendTokenSingle` | همان، با `GET` |
+| [send-token-single-concat-param.ps1](examples/v3/send-token-single-concat-param.ps1) | `SendTokenSingleConcatParam` | مقادیر قالب در رشته `p` با جداکننده نقطه‌ویرگول |
+| [send-token-single-concat-param-get.ps1](examples/v3/send-token-single-concat-param-get.ps1) | `SendTokenSingleConcatParam` | همان، با `GET` |
 | [send-token-multi.ps1](examples/v3/send-token-multi.ps1) | `SendTokenMulti` | یک قالب، چند گیرنده |
 | [status-by-id.ps1](examples/v3/status-by-id.ps1) | `StatusById` | وضعیت با شناسه سامانه |
 | [status-by-user-trace-id.ps1](examples/v3/status-by-user-trace-id.ps1) | `StatusByUserTraceId` | وضعیت با شناسه خودتان |

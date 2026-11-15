@@ -23,7 +23,7 @@ $query = 'ApiKey='       + [uri]::EscapeDataString($env:PAYAM_RESAN_API_KEY) +
 
 $response = Invoke-RestMethod `
     -Method Get `
-    -Uri "https://api.sms-webservice.com/api/V3/Send?$query" `
+    -Uri "https://www.payam-resan.com/api/V3/Send?$query" `
     -TimeoutSec 30
 
 if (-not $response.Success) {
